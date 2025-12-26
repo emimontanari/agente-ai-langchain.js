@@ -72,7 +72,7 @@ export default function ServicesPage() {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {services.map(service => (
-                    <Card key={service.id} className={!service.isActive ? "opacity-60" : "relative"}>
+                    <Card key={service.id} className={`relative ${!service.isActive ? "opacity-60" : ""}`}>
                         <CardHeader className="pb-3">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-2">

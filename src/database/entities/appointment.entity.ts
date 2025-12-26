@@ -3,7 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Barber } from './barber.entity';
+import { Service } from './service.entity';
+import { Customer } from './customer.entity';
 
 export type AppointmentStatus =
   | 'reserved'
@@ -40,4 +46,19 @@ export class Appointment {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt!: Date;
+
+  @ManyToOne(() => Customer, { nullable: true })
+  @JoinColumn({ name: 'customer_id' })
+  customer?: Customer;
+
+  @ManyToOne(() => Barber)
+  @JoinColumn({ name: 'barber_id' })
+  barber!: Barber;
+
+  @ManyToOne(() => Service)
+  @JoinColumn({ name: 'service_id' })
+  service!: Service;
 }

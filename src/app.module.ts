@@ -7,6 +7,10 @@ import { AgentModule } from './agent/agent.module';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { databaseConfig } from './config/database.config';
+import { ServicesModule } from './services/services.module';
+import { BarbersModule } from './barbers/barbers.module';
+import { CustomersModule } from './customers/customers.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [
@@ -18,8 +22,12 @@ import { databaseConfig } from './config/database.config';
     AgentModule,
     AuthModule,
     DatabaseModule,
+    ServicesModule,
+    BarbersModule,
+    CustomersModule,
+    AppointmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
