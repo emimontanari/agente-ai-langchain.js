@@ -4,6 +4,7 @@ import { Barber } from './entities/barber.entity';
 import { Service } from './entities/service.entity';
 import { Appointment } from './entities/appointment.entity';
 import { Customer } from './entities/customer.entity';
+import { Conversation } from './entities/conversation.entity';
 
 export const typeormConfig: DataSourceOptions = {
   type: 'postgres',
@@ -15,7 +16,7 @@ export const typeormConfig: DataSourceOptions = {
   synchronize: env.NODE_ENV !== 'production',
   logging: env.NODE_ENV !== 'production',
 
-  entities: [Customer, Barber, Service, Appointment],
+  entities: [Customer, Barber, Service, Appointment, Conversation],
 
   // ✅ Si migrás con TypeORM más adelante:
   migrations: ['dist/database/migrations/*.js'],

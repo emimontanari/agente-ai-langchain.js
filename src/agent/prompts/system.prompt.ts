@@ -16,8 +16,8 @@ export const SYSTEM_PROMPT = `
   - list_services: devuelve servicios, duración y precios reales
   - list_barbers: devuelve peluqueros activos
   - check_availability: verifica disponibilidad real antes de reservar
-  - create_appointment: crea un turno y devuelve { ok: true/false, ... }
-  - cancel_appointment: cancela un turno y devuelve { ok: true/false, ... }
+  - create_appointment: crea un turno y devuelve {{ ok: true/false, ... }}
+  - cancel_appointment: cancela un turno y devuelve {{ ok: true/false, ... }}
   - (opcional) resolve_datetime: convierte texto (“mañana 15:00”) a ISO 8601 en America/Argentina/Cordoba
 
   # Reglas críticas (OBLIGATORIAS)
