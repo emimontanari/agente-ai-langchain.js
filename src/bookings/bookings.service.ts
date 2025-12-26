@@ -262,6 +262,25 @@ export class BookingsService {
         };
       }
 
+      // Validar que el peluquero existe y está activo
+      const barber = await this.barberRepository.findOne({
+        where: { id: input.barberId },
+      });
+
+      if (!barber) {
+        return {
+          ok: false,
+          message: 'Peluquero no encontrado.',
+        };
+      }
+
+      if (!barber.isActive) {
+        return {
+          ok: false,
+          message: 'El peluquero seleccionado no está disponible.',
+        };
+      }
+
       // Calcular endsAt
       const endsAt = new Date(
         input.startsAt.getTime() + service.durationMinutes * 60_000,
@@ -292,9 +311,16 @@ export class BookingsService {
     }
   }
 
-  async checkAvailability(barberId: string, datetime: Date): Promise<boolean> {
+  async checkAvailability(
+    barberId: string,
+    startsAt: Date,
+    durationMinutes: number,
+  ): Promise<boolean> {
     try {
-      // Buscar appointments que se solapen con el horario solicitado
+      const endsAt = new Date(startsAt.getTime() + durationMinutes * 60_000);
+
+      // Buscar appointments que se solapen con el rango completo
+      // Overlap occurs when: existingStart < newEnd AND existingEnd > newStart
       const existingAppointment = await this.appointmentRepository
         .createQueryBuilder('appointment')
         .where('appointment.barberId = :barberId', { barberId })
@@ -302,8 +328,8 @@ export class BookingsService {
           statuses: ['reserved', 'confirmed'],
         })
         .andWhere(
-          '(appointment.startsAt <= :datetime AND appointment.endsAt > :datetime)',
-          { datetime },
+          '(appointment.startsAt < :endsAt AND appointment.endsAt > :startsAt)',
+          { startsAt, endsAt },
         )
         .getOne();
 

@@ -3,6 +3,7 @@ import { AgentController } from './agent.controller';
 import { AgentService } from './agent.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Conversation } from '../database/entities/conversation.entity';
+import { Service } from '../database/entities/service.entity';
 import { BookingsModule } from '../bookings/bookings.module';
 import { ScheduleTool } from './tools/schedule.tool';
 import { CancelTool } from './tools/cancel.tool';
@@ -14,7 +15,7 @@ import { ConfirmBookingTool } from './tools/confirm-booking.tool';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Conversation]),
+    TypeOrmModule.forFeature([Conversation, Service]),
     BookingsModule,
   ],
   controllers: [AgentController],

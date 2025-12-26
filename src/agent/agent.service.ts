@@ -103,10 +103,30 @@ export class AgentService implements OnModuleInit {
 
     let fullResponse = '';
 
+    /**
+     * LangChain AgentExecutor stream emits chunks with different shapes:
+     * - `{ actions: AgentAction[] }` – When the agent decides to call a tool
+     * - `{ steps: AgentStep[] }` – After a tool returns (contains `action` and `observation`)
+     * - `{ output: string }` – Final output from the agent (this is what we yield)
+     * - `{ intermediateSteps: AgentStep[] }` – All intermediate steps so far
+     * - Tool-specific chunks may also appear depending on the executor configuration
+     *
+     * We only yield `chunk.output` to the client as it contains the final response text.
+     * Other chunk types represent internal agent reasoning and tool invocations.
+     */
+    const isDebug = this.configService.get('NODE_ENV') === 'development';
+
     for await (const chunk of stream) {
+      // Debug logging: show all chunk types when in development mode
+      if (isDebug) {
+        console.debug('[AgentStream] Chunk received:', JSON.stringify(chunk, null, 2));
+      }
+
       if (chunk.output) {
         fullResponse += chunk.output;
         yield chunk.output;
+      } else if (isDebug) {
+        console.debug('[AgentStream] Skipped chunk (no output field):', Object.keys(chunk));
       }
     }
 
@@ -134,6 +154,14 @@ export class AgentService implements OnModuleInit {
         messages: [],
         context: {},
       });
+
+      // Persist immediately so tools can find it by conversationId
+      try {
+        conversation = await this.conversationRepo.save(conversation);
+      } catch (error) {
+        console.error('[prepareContext] Failed to persist new conversation:', error);
+        throw new Error(`Failed to create conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
 
     const chatHistory: BaseMessage[] = conversation.messages.map((msg) => {
@@ -142,9 +170,6 @@ export class AgentService implements OnModuleInit {
       }
       return new AIMessage(msg.content);
     });
-
-    console.log('DEBUG [prepareContext] conversation.messages:', conversation.messages);
-    console.log('DEBUG [prepareContext] chatHistory:', chatHistory);
 
     let enhancedMessage = `[ID: ${conversationId}] ${userMessage}`;
     const needsServices =
