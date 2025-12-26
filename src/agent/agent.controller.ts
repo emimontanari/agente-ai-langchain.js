@@ -16,18 +16,25 @@ export class AgentController {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const stream = this.agentService.processMessageStream(
-        body.message,
-        body.userId,
-        body.conversationId,
-      );
+      try {
+        const stream = this.agentService.processMessageStream(
+          body.message,
+          body.userId,
+          body.conversationId,
+        );
 
-      for await (const chunk of stream) {
-        res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+        for await (const chunk of stream) {
+          res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown streaming error';
+        console.error('Streaming error:', error);
+        res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
+      } finally {
+        res.write('data: [DONE]\n\n');
+        res.end();
       }
-
-      res.write('data: [DONE]\n\n');
-      return res.end();
+      return;
     } else {
       const response = await this.agentService.processMessage(
         body.message,

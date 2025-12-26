@@ -5,6 +5,7 @@ import { BookingsService } from '../../bookings/bookings.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from '../../database/entities/conversation.entity';
+import { Service } from '../../database/entities/service.entity';
 
 @Injectable()
 export class ScheduleTool {
@@ -12,7 +13,29 @@ export class ScheduleTool {
     private readonly bookings: BookingsService,
     @InjectRepository(Conversation)
     private conversationRepo: Repository<Conversation>,
+    @InjectRepository(Service)
+    private serviceRepo: Repository<Service>,
   ) { }
+
+  /**
+   * Formats a date in Spanish (Argentina) format deterministically.
+   * Avoids toLocaleString which can be inconsistent across Node.js builds.
+   * Format: "27 de diciembre de 2025 a las 10:00"
+   */
+  private formatDateSpanish(date: Date): string {
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    return `${day} de ${month} de ${year} a las ${hours}:${minutes}`;
+  }
 
   getTool() {
     return new DynamicStructuredTool({
@@ -50,10 +73,23 @@ export class ScheduleTool {
             };
           }
 
-          // 2. Validar disponibilidad antes de guardar
+          // 2. Obtener duración del servicio para validar disponibilidad
+          const service = await this.serviceRepo.findOne({
+            where: { id: serviceId },
+          });
+
+          if (!service) {
+            return {
+              ok: false,
+              message: 'Servicio no encontrado.',
+            };
+          }
+
+          // 3. Validar disponibilidad antes de guardar (con duración completa)
           const isAvailable = await this.bookings.checkAvailability(
             barberId,
             new Date(dateTimeIso),
+            service.durationMinutes,
           );
 
           if (!isAvailable) {
@@ -79,10 +115,7 @@ export class ScheduleTool {
           await this.conversationRepo.save(conversation);
 
           // 4. Retornar mensaje para que el agente solicite confirmación
-          const formattedDate = new Date(dateTimeIso).toLocaleString('es-AR', {
-            dateStyle: 'long',
-            timeStyle: 'short',
-          });
+          const formattedDate = this.formatDateSpanish(new Date(dateTimeIso));
 
           return {
             ok: true,
