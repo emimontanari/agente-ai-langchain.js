@@ -10,6 +10,7 @@ import { InfoTool } from './tools/info.tool';
 import { StatusTool } from './tools/status.tool';
 import { ListBarbersTool } from './tools/list-barbers.tool';
 import { ResolveDatetimeTool } from './tools/resolve-datetime.tool';
+import { ConfirmBookingTool } from './tools/confirm-booking.tool';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ResolveDatetimeTool } from './tools/resolve-datetime.tool';
     StatusTool,
     ListBarbersTool,
     ResolveDatetimeTool,
+    ConfirmBookingTool,
   ],
 })
 export class AgentModule { }
