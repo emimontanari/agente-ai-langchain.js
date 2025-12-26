@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AgentController } from './agent.controller';
 import { AgentService } from './agent.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Conversation } from '../database/entities/conversation.entity';
 import { BookingsModule } from '../bookings/bookings.module';
 import { ScheduleTool } from './tools/schedule.tool';
 import { CancelTool } from './tools/cancel.tool';
@@ -10,7 +12,10 @@ import { ListBarbersTool } from './tools/list-barbers.tool';
 import { ResolveDatetimeTool } from './tools/resolve-datetime.tool';
 
 @Module({
-  imports: [BookingsModule],
+  imports: [
+    TypeOrmModule.forFeature([Conversation]),
+    BookingsModule,
+  ],
   controllers: [AgentController],
   providers: [
     AgentService,
@@ -22,4 +27,4 @@ import { ResolveDatetimeTool } from './tools/resolve-datetime.tool';
     ResolveDatetimeTool,
   ],
 })
-export class AgentModule {}
+export class AgentModule { }
