@@ -27,44 +27,33 @@ import { usePathname } from "next/navigation";
 
 const menuItems = [
     {
-        title: "Dashboard",
-        url: "/",
-        icon: Home,
+        title: "General",
+        items: [
+            { title: "Dashboard", url: "/", icon: Home },
+            { title: "Calendario", url: "/calendar", icon: CalendarDays },
+        ],
     },
     {
-        title: "Turnos",
-        url: "/appointments",
-        icon: CalendarDays,
-    },
-    {
-        title: "Clientes",
-        url: "/customers",
-        icon: Users,
-    },
-    {
-        title: "Servicios",
-        url: "/services",
-        icon: Scissors,
-    },
-    {
-        title: "Peluqueros",
-        url: "/barbers",
-        icon: UserCircle,
+        title: "Gestión",
+        items: [
+            { title: "Turnos", url: "/appointments", icon: CalendarDays },
+            { title: "Clientes", url: "/customers", icon: Users },
+            { title: "Servicios", url: "/services", icon: Scissors },
+            { title: "Peluqueros", url: "/barbers", icon: UserCircle },
+        ],
     },
     {
         title: "Agente AI",
-        url: "/agent",
-        icon: MessageSquare,
+        items: [
+            { title: "Chat", url: "/agent", icon: MessageSquare },
+            { title: "Configuración", url: "/agent/settings", icon: Settings },
+        ],
     },
     {
-        title: "Reportes",
-        url: "/reports",
-        icon: BarChart3,
-    },
-    {
-        title: "Configuración",
-        url: "/settings",
-        icon: Settings,
+        title: "Analytics",
+        items: [
+            { title: "Reportes", url: "/reports", icon: BarChart3 },
+        ],
     },
 ];
 
@@ -80,26 +69,28 @@ export function AppSidebar() {
                 </div>
             </SidebarHeader>
             <SidebarContent>
-                <SidebarGroup>
-                    <SidebarGroupLabel>Menu</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {menuItems.map((item) => (
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton
-                                        asChild
-                                        isActive={pathname === item.url}
-                                    >
-                                        <Link href={item.url}>
-                                            <item.icon className="h-4 w-4" />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                {menuItems.map((section) => (
+                    <SidebarGroup key={section.title}>
+                        <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {section.items.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={pathname === item.url}
+                                        >
+                                            <Link href={item.url}>
+                                                <item.icon className="h-4 w-4" />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ))}
             </SidebarContent>
             <SidebarFooter className="border-t p-4">
                 <p className="text-xs text-muted-foreground">
