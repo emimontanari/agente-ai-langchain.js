@@ -14,7 +14,7 @@ export class BookingsService {
     private serviceRepository: Repository<Service>,
     @InjectRepository(Barber)
     private barberRepository: Repository<Barber>,
-  ) {}
+  ) { }
 
   async createAppointment(input: {
     customerName: string;
@@ -235,5 +235,82 @@ export class BookingsService {
     }
 
     return 'Tipo de consulta no válido. Usa "appointment" o "barber".';
+  }
+
+  async scheduleAppointment(input: {
+    barberId: string;
+    serviceId: string;
+    startsAt: Date;
+    customerName: string;
+    customerEmail?: string;
+    customerPhone?: string;
+  }): Promise<{
+    ok: boolean;
+    appointmentId?: string;
+    message?: string;
+  }> {
+    try {
+      // Validar que el servicio existe
+      const service = await this.serviceRepository.findOne({
+        where: { id: input.serviceId },
+      });
+
+      if (!service) {
+        return {
+          ok: false,
+          message: 'Servicio no encontrado.',
+        };
+      }
+
+      // Calcular endsAt
+      const endsAt = new Date(
+        input.startsAt.getTime() + service.durationMinutes * 60_000,
+      );
+
+      // Crear el appointment
+      const appointment = this.appointmentRepository.create({
+        barberId: input.barberId,
+        serviceId: input.serviceId,
+        startsAt: input.startsAt,
+        endsAt: endsAt,
+        status: 'confirmed',
+        notes: `Cliente: ${input.customerName}${input.customerEmail ? ` | Email: ${input.customerEmail}` : ''}${input.customerPhone ? ` | Tel: ${input.customerPhone}` : ''}`,
+      });
+
+      const saved = await this.appointmentRepository.save(appointment);
+
+      return {
+        ok: true,
+        appointmentId: saved.id,
+      };
+    } catch (error) {
+      console.error('Error en scheduleAppointment:', error);
+      return {
+        ok: false,
+        message: 'Error al crear el turno.',
+      };
+    }
+  }
+
+  async checkAvailability(barberId: string, datetime: Date): Promise<boolean> {
+    try {
+      // Buscar appointments que se solapen con el horario solicitado
+      const existingAppointment = await this.appointmentRepository
+        .createQueryBuilder('appointment')
+        .where('appointment.barberId = :barberId', { barberId })
+        .andWhere('appointment.status IN (:...statuses)', {
+          statuses: ['reserved', 'confirmed'],
+        })
+        .andWhere(
+          '(appointment.startsAt <= :datetime AND appointment.endsAt > :datetime)',
+          { datetime },
+        )
+        .getOne();
+
+      return !existingAppointment; // Disponible si NO hay appointment
+    } catch (error) {
+      console.error('Error en checkAvailability:', error);
+      return false;
+    }
   }
 }

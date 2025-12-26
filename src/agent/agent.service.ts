@@ -12,6 +12,7 @@ import { InfoTool } from './tools/info.tool';
 import { StatusTool } from './tools/status.tool';
 import { ListBarbersTool } from './tools/list-barbers.tool';
 import { ResolveDatetimeTool } from './tools/resolve-datetime.tool';
+import { ConfirmBookingTool } from './tools/confirm-booking.tool';
 import { BookingsService } from '../bookings/bookings.service';
 import { SYSTEM_PROMPT } from './prompts/system.prompt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -31,6 +32,7 @@ export class AgentService implements OnModuleInit {
     private statusTool: StatusTool,
     private listBarbersTool: ListBarbersTool,
     private resolveDatetimeTool: ResolveDatetimeTool,
+    private confirmBookingTool: ConfirmBookingTool,
     private bookingsService: BookingsService,
     @InjectRepository(Conversation)
     private conversationRepo: Repository<Conversation>,
@@ -54,6 +56,7 @@ export class AgentService implements OnModuleInit {
       this.statusTool.getTool(),
       this.listBarbersTool.getTool(),
       this.resolveDatetimeTool.getTool(),
+      this.confirmBookingTool.getTool(),
     ];
 
     const prompt = ChatPromptTemplate.fromMessages([
@@ -81,60 +84,99 @@ export class AgentService implements OnModuleInit {
     userId: string,
     conversationId: string,
   ): Promise<string> {
-    try {
-      // 1. Recover existing conversation
-      let conversation = await this.conversationRepo.findOne({
-        where: { id: conversationId },
-      });
+    const result = await this.executeAgent(userMessage, userId, conversationId);
+    return result.output;
+  }
 
-      if (!conversation) {
-        conversation = this.conversationRepo.create({
-          id: conversationId,
-          userId,
-          messages: [],
-          context: {},
-        });
+  async *processMessageStream(
+    userMessage: string,
+    userId: string,
+    conversationId: string,
+  ): AsyncGenerator<string> {
+    const { chatHistory, enhancedMessage, conversation } =
+      await this.prepareContext(userMessage, userId, conversationId);
+
+    const stream = await this.agent.stream({
+      input: enhancedMessage,
+      chat_history: chatHistory,
+    });
+
+    let fullResponse = '';
+
+    for await (const chunk of stream) {
+      if (chunk.output) {
+        fullResponse += chunk.output;
+        yield chunk.output;
       }
-
-      // 2. Prepare chat history for LangChain
-      const chatHistory: BaseMessage[] = conversation.messages.map((msg) => {
-        if (msg.role === 'user') {
-          return new HumanMessage(msg.content);
-        }
-        return new AIMessage(msg.content);
-      });
-
-      // 3. Force usage of tools when mentioning services/prices
-      let enhancedMessage = userMessage;
-      const needsServices =
-        /precio|precios|servicios|cu[aá]nto cuesta|costo/i.test(userMessage);
-
-      // Only add services context if it's not already in recent history regarding services?
-      // For now, keep the logic simple as before, but maybe we don't need to append it to the stored message,
-      // just to the input sent to the agent.
-      if (needsServices) {
-        const services = await this.bookingsService.listServices();
-        enhancedMessage = `${userMessage}\n\nServicios disponibles (base de datos):\n${JSON.stringify(services, null, 2)}`;
-      }
-
-      // 4. Call LangChain with full context
-      const result = await this.agent.invoke({
-        input: enhancedMessage,
-        chat_history: chatHistory,
-      });
-
-      // 5. Update conversation
-      conversation.messages.push(
-        { role: 'user', content: userMessage, timestamp: new Date() },
-        { role: 'assistant', content: result.output, timestamp: new Date() },
-      );
-
-      await this.conversationRepo.save(conversation);
-
-      return result.output;
-    } catch (error) {
-      console.error('Error en agente:', error);
-      return 'Lo siento, ocurrió un error procesando tu solicitud. Por favor, intenta de nuevo.';
     }
+
+    // Update conversation at the end
+    conversation.messages.push(
+      { role: 'user', content: userMessage, timestamp: new Date() },
+      { role: 'assistant', content: fullResponse, timestamp: new Date() },
+    );
+    await this.conversationRepo.save(conversation);
+  }
+
+  private async prepareContext(
+    userMessage: string,
+    userId: string,
+    conversationId: string,
+  ) {
+    let conversation = await this.conversationRepo.findOne({
+      where: { id: conversationId },
+    });
+
+    if (!conversation) {
+      conversation = this.conversationRepo.create({
+        id: conversationId,
+        userId,
+        messages: [],
+        context: {},
+      });
+    }
+
+    const chatHistory: BaseMessage[] = conversation.messages.map((msg) => {
+      if (msg.role === 'user') {
+        return new HumanMessage(msg.content);
+      }
+      return new AIMessage(msg.content);
+    });
+
+    console.log('DEBUG [prepareContext] conversation.messages:', conversation.messages);
+    console.log('DEBUG [prepareContext] chatHistory:', chatHistory);
+
+    let enhancedMessage = `[ID: ${conversationId}] ${userMessage}`;
+    const needsServices =
+      /precio|precios|servicios|cu[aá]nto cuesta|costo/i.test(userMessage);
+
+    if (needsServices) {
+      const services = await this.bookingsService.listServices();
+      enhancedMessage = `${enhancedMessage}\n\nServicios disponibles (base de datos):\n${JSON.stringify(services, null, 2)}`;
+    }
+
+    return { chatHistory, enhancedMessage, conversation };
+  }
+
+  private async executeAgent(
+    userMessage: string,
+    userId: string,
+    conversationId: string,
+  ) {
+    const { chatHistory, enhancedMessage, conversation } =
+      await this.prepareContext(userMessage, userId, conversationId);
+
+    const result = await this.agent.invoke({
+      input: enhancedMessage,
+      chat_history: chatHistory,
+    });
+
+    conversation.messages.push(
+      { role: 'user', content: userMessage, timestamp: new Date() },
+      { role: 'assistant', content: result.output, timestamp: new Date() },
+    );
+
+    await this.conversationRepo.save(conversation);
+    return result;
   }
 }

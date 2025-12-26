@@ -25,8 +25,12 @@ export class Conversation {
   context: {
     pendingBooking?: {
       serviceId?: string;
+      serviceName?: string;
       barberId?: string;
+      barberName?: string;
       datetime?: string;
+      priceCents?: number;
+      confirmed: boolean;
     };
     lastMentionedAppointmentId?: string;
   };
