@@ -87,7 +87,7 @@ export default function BarbersPage() {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {barbers.map(barber => (
-                    <Card key={barber.id} className={!barber.isActive ? "opacity-60" : ""}>
+                    <Card key={barber.id} className={`relative ${!barber.isActive ? "opacity-60" : ""}`}>
                         <CardHeader className="pb-3">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">

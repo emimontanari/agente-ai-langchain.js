@@ -35,7 +35,7 @@ export class BookingsService {
 
       if (input.barberName && !barberId) {
         const barber = await this.barberRepository.findOne({
-          where: { displayName: ILike(input.barberName.trim()) },
+          where: { name: ILike(input.barberName.trim()) },
         });
         if (!barber) {
           return JSON.stringify({
@@ -178,12 +178,12 @@ export class BookingsService {
   async listBarbers() {
     const barbers = await this.barberRepository.find({
       where: { isActive: true },
-      order: { displayName: 'ASC' },
+      order: { name: 'ASC' },
     });
 
     return barbers.map((b) => ({
       id: b.id,
-      name: b.displayName,
+      name: b.name,
       isAvailable: b.isActive,
     }));
   }
@@ -225,7 +225,7 @@ export class BookingsService {
       return JSON.stringify(
         {
           id: barber.id,
-          name: barber.displayName,
+          name: barber.name,
           isAvailable: barber.isActive,
           specialties: 'No especificado',
         },

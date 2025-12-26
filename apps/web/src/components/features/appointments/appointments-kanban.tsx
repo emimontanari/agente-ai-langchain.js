@@ -22,6 +22,7 @@ const KANBAN_COLUMNS: KanbanColumn<AppointmentKanbanItem>[] = [
     { id: "confirmed", title: "Confirmados", color: "#22c55e" },
     { id: "completed", title: "Completados", color: "#6366f1" },
     { id: "cancelled", title: "Cancelados", color: "#ef4444" },
+    { id: "no_show", title: "No asistido", color: "#6b7280" },
 ]
 
 export function AppointmentsKanban({

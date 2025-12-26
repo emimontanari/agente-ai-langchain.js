@@ -1,134 +1,137 @@
 "use client"
 
 import * as React from "react"
-import type { Barber, BarberWithStats, CreateBarberInput, UpdateBarberInput } from "@/lib/types/barbers"
+import { api } from "@/lib/api-config"
+import type { Barber, BarberWithStats, CreateBarberInput, UpdateBarberInput, WorkSchedule } from "@/lib/types/barbers"
 
-const MOCK_BARBERS: BarberWithStats[] = [
-    {
-        id: "b1",
-        name: "Carlos Rodríguez",
-        phone: "+54 11 1111-1111",
-        email: "carlos@peluqueria.com",
-        specialty: "Cortes modernos",
-        schedule: [
-            { dayOfWeek: 1, startTime: "09:00", endTime: "18:00" },
-            { dayOfWeek: 2, startTime: "09:00", endTime: "18:00" },
-            { dayOfWeek: 3, startTime: "09:00", endTime: "18:00" },
-            { dayOfWeek: 4, startTime: "09:00", endTime: "18:00" },
-            { dayOfWeek: 5, startTime: "09:00", endTime: "18:00" },
-        ],
-        isActive: true,
-        createdAt: new Date("2023-01-01"),
-        updatedAt: new Date(),
-        totalAppointments: 245,
-        completedAppointments: 238,
-        totalRevenue: 367500,
-        averageRating: 4.8,
-    },
-    {
-        id: "b2",
-        name: "María López",
-        phone: "+54 11 2222-2222",
-        email: "maria@peluqueria.com",
-        specialty: "Coloración y tintes",
-        schedule: [
-            { dayOfWeek: 1, startTime: "10:00", endTime: "19:00" },
-            { dayOfWeek: 2, startTime: "10:00", endTime: "19:00" },
-            { dayOfWeek: 3, startTime: "10:00", endTime: "19:00" },
-            { dayOfWeek: 4, startTime: "10:00", endTime: "19:00" },
-            { dayOfWeek: 5, startTime: "10:00", endTime: "19:00" },
-            { dayOfWeek: 6, startTime: "09:00", endTime: "14:00" },
-        ],
-        isActive: true,
-        createdAt: new Date("2023-03-15"),
-        updatedAt: new Date(),
-        totalAppointments: 189,
-        completedAppointments: 182,
-        totalRevenue: 582400,
-        averageRating: 4.9,
-    },
-    {
-        id: "b3",
-        name: "Juan Martínez",
-        phone: "+54 11 3333-3333",
-        specialty: "Barbería clásica",
-        schedule: [
-            { dayOfWeek: 2, startTime: "08:00", endTime: "16:00" },
-            { dayOfWeek: 3, startTime: "08:00", endTime: "16:00" },
-            { dayOfWeek: 4, startTime: "08:00", endTime: "16:00" },
-            { dayOfWeek: 5, startTime: "08:00", endTime: "16:00" },
-            { dayOfWeek: 6, startTime: "08:00", endTime: "14:00" },
-        ],
-        isActive: true,
-        createdAt: new Date("2023-06-01"),
-        updatedAt: new Date(),
-        totalAppointments: 156,
-        completedAppointments: 150,
-        totalRevenue: 225000,
-        averageRating: 4.7,
-    },
-]
+interface ScheduleResponse {
+    id: string
+    dayOfWeek: number
+    startTime: string
+    endTime: string
+}
+
+interface BarberResponse {
+    id: string
+    name: string
+    phone?: string
+    email?: string
+    specialty?: string
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+    schedules: ScheduleResponse[]
+    totalAppointments: number
+    completedAppointments: number
+    totalRevenue: number
+    averageRating?: number
+}
+
+// Map backend response to frontend type
+function mapBarberResponse(b: BarberResponse): BarberWithStats {
+    return {
+        id: b.id,
+        name: b.name,
+        phone: b.phone,
+        email: b.email,
+        specialty: b.specialty,
+        isActive: b.isActive,
+        schedule: b.schedules?.map(s => ({
+            dayOfWeek: s.dayOfWeek,
+            startTime: s.startTime,
+            endTime: s.endTime,
+        })) || [],
+        createdAt: new Date(b.createdAt),
+        updatedAt: new Date(b.updatedAt),
+        totalAppointments: b.totalAppointments ?? 0,
+        completedAppointments: b.completedAppointments ?? 0,
+        totalRevenue: b.totalRevenue ?? 0,
+        averageRating: b.averageRating,
+    }
+}
 
 export function useBarbers() {
-    const [barbers, setBarbers] = React.useState<BarberWithStats[]>(MOCK_BARBERS)
-    const [isLoading, setIsLoading] = React.useState(false)
+    const [barbers, setBarbers] = React.useState<BarberWithStats[]>([])
+    const [isLoading, setIsLoading] = React.useState(true)
+    const [error, setError] = React.useState<string | null>(null)
+
+    React.useEffect(() => {
+        loadBarbers()
+    }, [])
+
+    const loadBarbers = async () => {
+        setIsLoading(true)
+        setError(null)
+        try {
+            const data = await api.get<BarberResponse[]>("/api/barbers")
+            setBarbers(data.map(mapBarberResponse))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error loading barbers")
+            console.error("Error loading barbers:", err)
+        } finally {
+            setIsLoading(false)
+        }
+    }
 
     const createBarber = async (input: CreateBarberInput): Promise<Barber> => {
         setIsLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        const newBarber: BarberWithStats = {
-            id: `b${Date.now()}`,
-            ...input,
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            totalAppointments: 0,
-            completedAppointments: 0,
-            totalRevenue: 0,
+        setError(null)
+        try {
+            const data = await api.post<BarberResponse>("/api/barbers", input)
+            const newBarber = mapBarberResponse(data)
+            setBarbers(prev => [...prev, newBarber])
+            return newBarber
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error creating barber")
+            throw err
+        } finally {
+            setIsLoading(false)
         }
-
-        setBarbers(prev => [...prev, newBarber])
-        setIsLoading(false)
-        return newBarber
     }
 
     const updateBarber = async (input: UpdateBarberInput): Promise<Barber | null> => {
         setIsLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        let updated: Barber | null = null
-        setBarbers(prev => prev.map(b => {
-            if (b.id === input.id) {
-                updated = { ...b, ...input, updatedAt: new Date() }
-                return updated as BarberWithStats
-            }
-            return b
-        }))
-
-        setIsLoading(false)
-        return updated
+        setError(null)
+        try {
+            const data = await api.put<BarberResponse>(`/api/barbers/${input.id}`, input)
+            const updated = mapBarberResponse(data)
+            setBarbers(prev => prev.map(b => b.id === updated.id ? updated : b))
+            return updated
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error updating barber")
+            throw err
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const toggleActive = async (id: string): Promise<void> => {
         setIsLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 300))
-
-        setBarbers(prev => prev.map(b => {
-            if (b.id === id) {
-                return { ...b, isActive: !b.isActive, updatedAt: new Date() }
-            }
-            return b
-        }))
-
-        setIsLoading(false)
+        setError(null)
+        try {
+            const data = await api.patch<BarberResponse>(`/api/barbers/${id}/toggle`)
+            const updated = mapBarberResponse(data)
+            setBarbers(prev => prev.map(b => b.id === id ? updated : b))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error toggling barber")
+            throw err
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const deleteBarber = async (id: string): Promise<void> => {
         setIsLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 300))
-        setBarbers(prev => prev.filter(b => b.id !== id))
-        setIsLoading(false)
+        setError(null)
+        try {
+            await api.delete(`/api/barbers/${id}`)
+            setBarbers(prev => prev.filter(b => b.id !== id))
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error deleting barber")
+            throw err
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const getBarberById = (id: string): BarberWithStats | undefined => {
@@ -138,6 +141,8 @@ export function useBarbers() {
     return {
         barbers,
         isLoading,
+        error,
+        refetch: loadBarbers,
         createBarber,
         updateBarber,
         toggleActive,

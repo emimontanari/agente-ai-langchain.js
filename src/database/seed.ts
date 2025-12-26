@@ -15,9 +15,9 @@ async function seed() {
   const existingBarbers = await barberRepo.count();
   if (existingBarbers === 0) {
     const barbers = barberRepo.create([
-      { displayName: 'Juan', isActive: true },
-      { displayName: 'Maria', isActive: true },
-      { displayName: 'Carlos', isActive: true },
+      { name: 'Juan', isActive: true },
+      { name: 'Maria', isActive: true },
+      { name: 'Carlos', isActive: true },
     ]);
     await barberRepo.save(barbers);
     console.log('✅ Barbers created');
